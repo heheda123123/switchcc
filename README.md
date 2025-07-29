@@ -14,3 +14,4 @@ claude code config switch tool
 ```
 nim c -d:release main.nim
 ```
+ps: 我本地使用zigcc交叉编译

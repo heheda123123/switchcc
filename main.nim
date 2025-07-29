@@ -20,7 +20,7 @@ proc scanConfigFiles(): seq[ConfigFile] =
   var configs: seq[ConfigFile] = @[]
   for filepath in walkFiles(joinPath(claudeDir, "settings.json.*")):
     let filename = extractFilename(filepath)
-    if filename.startsWith("settings.json."):
+    if filename.startsWith("settings.json.") and not filename.endsWith(".backup"):
       let suffix = filename[14..^1]  # Remove "settings.json." prefix
       configs.add(ConfigFile(
         filename: filename,

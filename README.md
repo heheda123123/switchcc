@@ -9,3 +9,8 @@ claude code config switch tool
 ./main.exe instc    # 切换到 settings.json.instc
 ./main.exe yes    # 切换到 settings.json.yes
 ```
+
+## build
+```
+nim c -d:release main.nim
+```

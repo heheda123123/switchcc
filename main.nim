@@ -1,6 +1,6 @@
 import os, strutils, algorithm
 from strutils import split, startsWith, endsWith, contains, toLowerAscii
-from os import getHomeDir, joinPath, dirExists, fileExists, walkFiles, copyFile, removeFile
+from os import getHomeDir, joinPath, dirExists, fileExists, walkFiles, copyFile, removeFile, getCurrentDir, createDir
 from algorithm import sorted
 
 type
@@ -81,6 +81,26 @@ proc switchConfig(targetConfig: ConfigFile) =
   copyFile(targetConfig.path, currentSettingsPath)
   echo "Switched to configuration: " & targetConfig.suffix
 
+proc switchConfigToCurrentDir(targetConfig: ConfigFile) =
+  let currentDir = getCurrentDir()
+  let localClaudeDir = joinPath(currentDir, ".claude")
+  let localSettingsPath = joinPath(localClaudeDir, "settings.json")
+  let localBackupPath = joinPath(localClaudeDir, "settings.json.backup")
+  
+  # Create .claude directory in current directory if it doesn't exist
+  if not dirExists(localClaudeDir):
+    createDir(localClaudeDir)
+    echo "Created .claude directory in current path"
+  
+  # Backup current local settings.json if it exists
+  if fileExists(localSettingsPath):
+    copyFile(localSettingsPath, localBackupPath)
+    echo "Backed up current local settings to settings.json.backup"
+  
+  # Copy target config to local settings.json
+  copyFile(targetConfig.path, localSettingsPath)
+  echo "Copied configuration '" & targetConfig.suffix & "' to local .claude directory"
+
 proc listConfigs(configs: seq[ConfigFile]) =
   echo "Available configurations:"
   for config in configs.sorted(proc(a, b: ConfigFile): int = cmp(a.suffix, b.suffix)):
@@ -98,17 +118,37 @@ proc main() =
     listConfigs(configs)
     quit(0)
   
-  if args.len != 1:
-    echo "Usage: scc <suffix>"
-    echo "       scc           (list all configurations)"
-    quit(1)
+  # Check for -p parameter
+  var useCurrentDir = false
+  var targetSuffix = ""
   
-  let targetSuffix = args[0]
+  if args.len == 1:
+    targetSuffix = args[0]
+  elif args.len == 2:
+    if args[0] == "-p":
+      useCurrentDir = true
+      targetSuffix = args[1]
+    elif args[1] == "-p":
+      useCurrentDir = true
+      targetSuffix = args[0]
+    else:
+      echo "Usage: scc <suffix>"
+      echo "       scc -p <suffix>   (copy config to current directory)"
+      echo "       scc               (list all configurations)"
+      quit(1)
+  else:
+    echo "Usage: scc <suffix>"
+    echo "       scc -p <suffix>   (copy config to current directory)"
+    echo "       scc               (list all configurations)"
+    quit(1)
   
   try:
     let configs = scanConfigFiles()
     let bestMatch = findBestMatch(configs, targetSuffix)
-    switchConfig(bestMatch)
+    if useCurrentDir:
+      switchConfigToCurrentDir(bestMatch)
+    else:
+      switchConfig(bestMatch)
   except ValueError as e:
     echo "Error: " & e.msg
     quit(1)
